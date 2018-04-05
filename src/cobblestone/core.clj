@@ -1,5 +1,13 @@
 (ns cobblestone.core
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.spec.alpha :as s]
+            [clojure.java.io :as io]
+            [clojure.edn :as edn]
+            [clojure.xml :as xml]
+            [picasso.core :as img]
+            [cobblestone.color :as colors])
+  (:import (clojure.lang ExceptionInfo)
+           (java.io FileOutputStream)))
 
 (defmulti ^:private process-color first)
 
