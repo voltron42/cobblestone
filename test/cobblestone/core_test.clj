@@ -1,23 +1,30 @@
 (ns cobblestone.core-test
   (:require [clojure.test :refer :all]
             [cobblestone.core :as pixel]
+            [cobblestone.spec :as tiles]
             [clojure.xml :as xml]
             [clojure.pprint :as pp]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [picasso.core :as img])
-  (:import (java.io FileOutputStream)))
+            [picasso.core :as img]
+            [clojure.spec.alpha :as s])
+  (:import (java.io FileOutputStream ByteArrayInputStream)))
 
 (defn- build-files [xml-file img-file tile-doc]
   (let [svg (pixel/build-svg-from-tile-doc tile-doc)
         _ (pp/pprint svg)
+        input (-> svg
+                  (xml/emit-element)
+                  (with-out-str)
+                  (.getBytes)
+                  (ByteArrayInputStream.))
         xml (->> svg
                  (xml/emit)
                  (with-out-str))
         out (FileOutputStream. (io/file (str "resources/" img-file)))]
     (spit (str "resources/" xml-file) xml)
-    (img/rasterize :png {} svg out)))
+    (img/rasterize :png {} input out)))
 
 (def ^:private doc (edn/read-string (slurp "resources/practicetiles/pixel-tiles.edn")))
 

@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.spec.alpha :as s]
             [clojure.edn :as edn]
+            [cobblestone.spec :as pixel]
             [clojure.string :as str]))
 
 (def corner-tile

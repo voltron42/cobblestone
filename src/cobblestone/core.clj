@@ -5,9 +5,10 @@
             [clojure.edn :as edn]
             [clojure.xml :as xml]
             [picasso.core :as img]
-            [cobblestone.color :as colors])
+            [cobblestone.color :as colors]
+            [cobblestone.spec :as pixel])
   (:import (clojure.lang ExceptionInfo)
-           (java.io FileOutputStream)))
+           (java.io FileOutputStream ByteArrayInputStream)))
 
 (defmulti ^:private process-color first)
 
@@ -212,13 +213,18 @@
         _ (println "building images:")
         gallery (mapv (fn [[label svg]]
                         (println label)
-                        (let [out-name (name label)
+                        (let [input (-> svg
+                                        (xml/emit-element)
+                                        (with-out-str)
+                                        (.getBytes)
+                                        (ByteArrayInputStream.))
+                              out-name (name label)
                               xml (with-out-str (xml/emit svg))
                               img-name (str out-name ".png")
                               svg-name (str out-name ".xml")
                               out (FileOutputStream. (io/file path img-name))]
                           (spit (.getAbsolutePath (io/file path svg-name)) xml)
-                          (img/rasterize :png {} svg out)
+                          (img/rasterize :png {} input out)
                           {:tag :a
                            :attrs {:href svg-name}
                            :content [{:tag :img
