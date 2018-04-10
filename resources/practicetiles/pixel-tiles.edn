@@ -54,7 +54,7 @@
               :palegoldenrod :darkgoldenrod :saddlebrown
               :mediumpurple :indigo :black]
   }
- 5
+ 6
  {:single [[:stone-floor :stone :a/a]]
   :simple-room [[:brick-corner :brick :a/a]
                 [:brick-corner :brick :flip-down :a/h]

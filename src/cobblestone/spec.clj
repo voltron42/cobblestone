@@ -22,7 +22,7 @@
          :g ::color-component
          :b ::color-component))
 
-(s/def ::hex-color (s/and string? (partial re-matches #"[#][0-9A-F]{3}([0-9A-F]{3})?")))
+(s/def ::hex-color (s/and keyword? #(re-matches #"[#][0-9A-F]{3}([0-9A-F]{3})?" (str %))))
 
 (def color-names (set (mapv #(keyword (name %)) (keys colors/css))))
 

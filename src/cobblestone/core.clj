@@ -4,11 +4,9 @@
             [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.xml :as xml]
-            [picasso.core :as img]
             [cobblestone.color :as colors]
             [cobblestone.spec :as pixel])
-  (:import (clojure.lang ExceptionInfo)
-           (java.io FileOutputStream ByteArrayInputStream)))
+  (:import (clojure.lang ExceptionInfo)))
 
 (defmulti ^:private process-color first)
 
@@ -40,8 +38,17 @@
 (defmethod ^:private do-action :flip-over
   [{:keys [x y]} _] {:x (- 15 x) :y y})
 
+(def ^:private printer-css
+  "@media print {\n    svg {\n        page-break-after: always;\n        margin: 0.25in 0.5in 0.25in 0.5in;\n    }\n    @page {\n        size: landscape;\n        margin: 0;\n    }\n}")
+
 (defn- index [c]
   (- (int c) 97))
+
+(defn- optimize-tile [tile]
+  (let [counts (reduce-kv #(assoc %1 %2 (count %3)) {} tile)
+        bg (->> counts (sort-by second) last first)]
+    {:bg bg
+     :pixels (dissoc tile bg)}))
 
 (defn- parse-tile [tile]
   (let [rows (mapv vector (range 16) (str/split tile #"[|]"))
@@ -54,10 +61,8 @@
                      (mapv #(vector %1 (index %2)) (range 16) row)))
                  []
                  rows)
-        pixels (group-by :c pixels)
-        counts (reduce-kv #(assoc %1 %2 (count %3)) {} pixels)
-        bg (->> counts (sort-by second) last first)]
-    {:bg bg :pixels (reduce-kv #(assoc %1 %2 (map (fn [{:keys [x y]}] {:x x :y y}) %3)) {} (dissoc pixels bg))}))
+        pixels (group-by :c pixels)]
+    {:pixels (reduce-kv #(assoc %1 %2 (map (fn [p] (select-keys p [:x :y])) %3)) {} pixels)}))
 
 (defn explode-tile [tile]
   (let [{:keys [out]} (reduce
@@ -90,22 +95,23 @@
              :xmlns:xlink "http://www.w3.org/1999/xlink"}
      :content (into [{:tag :defs
                       :content (mapv (fn [{:keys [id bg pixels]}]
-                                       {:tag :g
-                                        :attrs {:id id}
-                                        :content (into [{:tag :rect
-                                                         :attrs {:width tile-size
-                                                                 :height tile-size
-                                                                 :stroke "none"
-                                                                 :fill bg}}]
-                                                       (map (fn [{:keys [c x y]}]
-                                                              {:tag :rect
-                                                               :attrs {:x (* x pixel-size)
-                                                                       :y (* y pixel-size)
-                                                                       :width pixel-size
-                                                                       :height pixel-size
-                                                                       :stroke "none"
-                                                                       :fill c}})
-                                                            pixels))})
+                                       (let [background (if (nil? bg) [] [{:tag :rect
+                                                                           :attrs {:width tile-size
+                                                                                   :height tile-size
+                                                                                   :stroke "none"
+                                                                                   :fill bg}}])]
+                                         {:tag :g
+                                          :attrs {:id id}
+                                          :content (into background
+                                                         (map (fn [{:keys [c x y]}]
+                                                                {:tag :rect
+                                                                 :attrs {:x (* x pixel-size)
+                                                                         :y (* y pixel-size)
+                                                                         :width pixel-size
+                                                                         :height pixel-size
+                                                                         :stroke "none"
+                                                                         :fill c}})
+                                                              pixels))}))
                                      defs)}]
                     (reduce
                       (fn [out {:keys [id x y]}]
@@ -161,27 +167,33 @@
   (let [tile (explode-tile (str/join "|" (str/split tile #"\n")))]
     (str/join "\n" (apply mapv #(apply str %&) (str/split tile #"[|]")))))
 
-(defn- build-svg-from-exploded-tile-doc [{:keys [tiles palettes pixel-size list] :or {pixel-size 1}}]
+(defn- build-svg-from-exploded-tile-doc [tile-name {:keys [tiles palettes pixel-size list] :or {pixel-size 1}}]
   (let [tiles (reduce-kv #(assoc %1 %2 (parse-tile (explode-tile %3))) {} tiles)
         palettes (reduce-kv #(assoc %1 %2 (mapv process-color %3)) {} palettes)
         list (into (sorted-map) (mapv vector (range) list))
         {:keys [defs uses]} (reduce-kv
-                              (fn [{:keys [defs uses]} index {:keys [name palette-name actions locs]}]
-                                (let [actions (if (empty? actions) [] actions)
-                                      {:keys [bg pixels]} (get tiles name)
-                                      pixels (reduce-kv #(assoc %1 %2 (mapv (fn [pixel] (reduce do-action pixel actions)) %3))
-                                                        {} pixels)
+                              (fn [& n]
+                                (let [
+                                      [m k v] n
+                                      {:keys [defs uses]} m
+                                      index k
+                                      {:keys [name palette-name actions locs]} v
+                                      actions (if (empty? actions) [] actions)
+                                      {:keys [pixels]} (get tiles name)
                                       palette (get palettes palette-name)
-                                      id (str "tile" index)
-                                      bg (get palette bg)]
-                                  {:defs (conj defs {:id id
-                                                     :bg bg
-                                                     :pixels (reduce-kv
-                                                               #(let [color (get palette %2)]
-                                                                  (if-not (nil? color)
-                                                                    (concat %1 (mapv (fn [pixel] (assoc pixel :c color)) %3))
-                                                                    %1))
-                                                               [] pixels)})
+                                      {:keys [bg pixels]} (if (some nil? palette) [nil pixels] (optimize-tile pixels))
+                                      pixels (reduce-kv #(assoc %1 %2 (mapv (fn [pixel] (reduce do-action pixel actions)) %3)) {} pixels)
+                                      id (str tile-name index)
+                                      bg (get palette bg)
+                                      base (if (nil? bg) {} {:bg bg})]
+                                  {:defs (conj defs (assoc base
+                                                      :id id
+                                                      :pixels (reduce-kv
+                                                                #(let [color (get palette %2)]
+                                                                   (if-not (nil? color)
+                                                                     (concat %1 (mapv (fn [pixel] (assoc pixel :c color)) %3))
+                                                                     %1))
+                                                                [] pixels)))
                                    :uses (concat uses (reduce (fn [out loc]
                                                                 (concat out (mapv (fn [[x y]] {:id id :x x :y y})
                                                                                   (span-loc loc))))
@@ -194,7 +206,7 @@
 (defn build-svg-from-tile-doc [tile-doc]
   (when-let [error (s/explain-data ::pixel/tile-doc tile-doc)]
     (throw (ExceptionInfo. "Error in tile-doc" {:error error})))
-  (build-svg-from-exploded-tile-doc (s/conform ::pixel/tile-doc tile-doc)))
+  (build-svg-from-exploded-tile-doc "tile" (s/conform ::pixel/tile-doc tile-doc)))
 
 (defn build-svgs-from-tile-docs [tile-docs]
   (when-let [error (s/explain-data ::pixel/tile-doc-set tile-docs)]
@@ -202,38 +214,21 @@
   (let [tile-doc-set (s/conform ::pixel/tile-doc-set tile-docs)
         {:keys [tiles palettes pixel-size docs] :or {pixel-size 1} :as tiles-n-palettes} tile-doc-set
         tile-map (reduce-kv #(assoc %1 %2 {:tiles tiles :palettes palettes :pixel-size pixel-size :list %3}) {} docs)]
-    (reduce-kv #(do (println %2) (assoc %1 %2 (build-svg-from-exploded-tile-doc %3))) {} tile-map)))
+    (reduce-kv #(do (println %2) (assoc %1 %2 (build-svg-from-exploded-tile-doc (name %2) %3))) {} tile-map)))
 
-(defn build-svgs-and-pngs-from-tile-docs-file [filename]
-  (let [path (.getParent (io/file filename))
-        docs (edn/read-string (slurp filename))
-        _ (println "building svgs")
+(defn build-html-from-tile-docs-text [in-str]
+  (let [docs (edn/read-string in-str)
         svgs (build-svgs-from-tile-docs docs)
-        _ (println)
-        _ (println "building images:")
-        gallery (mapv (fn [[label svg]]
-                        (println label)
-                        (let [input (-> svg
-                                        (xml/emit-element)
-                                        (with-out-str)
-                                        (.getBytes)
-                                        (ByteArrayInputStream.))
-                              out-name (name label)
-                              xml (with-out-str (xml/emit svg))
-                              img-name (str out-name ".png")
-                              svg-name (str out-name ".xml")
-                              out (FileOutputStream. (io/file path img-name))]
-                          (spit (.getAbsolutePath (io/file path svg-name)) xml)
-                          (img/rasterize :png {} input out)
-                          {:tag :a
-                           :attrs {:href svg-name}
-                           :content [{:tag :img
-                                      :attrs {:src img-name}}]})) svgs)
-        gallery-page {:tag :html
-                      :content [{:tag :body
-                                 :content gallery}]}
-        gallery-html (with-out-str (xml/emit-element gallery-page))]
-    (spit (.getAbsolutePath (io/file path "gallery.html")) gallery-html)))
+        build-page {:tag :html
+                    :content [{:tag :head
+                               :content [{:tag :style
+                                          :content [printer-css]}]}
+                              {:tag :body
+                               :content (vals svgs)}]}]
+    (with-out-str (xml/emit-element build-page))))
 
 (defn -main [& [filename]]
-  (build-svgs-and-pngs-from-tile-docs-file filename))
+  (let [path (.getParent (io/file filename))
+        in-str (slurp path)
+        build-html (build-html-from-tile-docs-text in-str)]
+  (spit (.getAbsolutePath (io/file path "build.html")) build-html)))

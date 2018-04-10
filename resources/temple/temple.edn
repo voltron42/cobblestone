@@ -24,7 +24,7 @@
   :shiny [:lightblue :blue :indigo :black]
   :shallow [:lightblue :blue]
   }
- 5
+ 6
  {:maze-1-quarters-east [[:brick-corner :brick :a/a :a/f]
                          [:brick-corner :brick :flip-over :h/a :h/f]
                          [:brick-corner :brick :flip-down :a/e :a/j]

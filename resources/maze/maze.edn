@@ -18,7 +18,7 @@
   :door [:white :mediumpurple :indigo :black]
   :shallow [:lightblue :blue]
   }
- 5
+ 6
  {:maze-1-bath [[:brick-corner :brick :a/a]
                 [:brick-corner :brick :flip-over :j/a]
                 [:brick-corner :brick :flip-down :a/h]
