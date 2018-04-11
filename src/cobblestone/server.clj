@@ -9,6 +9,7 @@
             [schema.core :as s]
             [cobblestone.core :as cob]
             [clojure.pprint :as pp])
+  (:import (java.io ByteArrayInputStream))
   (:gen-class))
 
 (defn- build-html [code]
@@ -24,12 +25,11 @@
                             (sweet/resource {:description ""
                                              :post        {:summary    ""
                                                            :parameters {:body s/Any}
-                                                           :responses  {200 {:schema s/Any}}
+                                                           :responses  {200 {:schema s/Str}}
                                                            :handler    (fn [{body :body}]
                                                                          (let [code (slurp body)]
-                                                                           (http/header
+                                                                           (http/content-type
                                                                              (http/ok (build-html code))
-                                                                             "Content-Type"
                                                                              "text/html")
                                                                            ))}}))
                (sweet/GET "/" [] (resp/redirect "/index.html")))
