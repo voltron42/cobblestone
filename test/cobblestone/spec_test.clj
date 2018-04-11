@@ -168,7 +168,7 @@
 
     (println (pr-str (s/conform ::pixel/tile-doc tile-doc)))))
 
-(def ^:private doc (edn/read-string (slurp "resources/practicetiles/pixel-tiles.edn")))
+(def ^:private doc (edn/read-string (slurp "practice/practicetiles/pixel-tiles.edn")))
 
 (deftest test-tiles
   (let [{:keys [cave-wall

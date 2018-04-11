@@ -14,9 +14,9 @@
         xml (->> svg
                  (xml/emit)
                  (with-out-str))]
-    (spit (str "resources/" xml-file) xml)))
+    (spit (str "practice/" xml-file) xml)))
 
-(def ^:private doc (edn/read-string (slurp "resources/practicetiles/pixel-tiles.edn")))
+(def ^:private doc (edn/read-string (slurp "practice/practicetiles/pixel-tiles.edn")))
 
 (deftest test-pixel-small
   (let [[tiles palettes size {:keys [single]}] doc]

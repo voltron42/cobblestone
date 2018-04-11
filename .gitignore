@@ -11,6 +11,6 @@ pom.xml.asc
 .hg/
 /.idea
 *.iml
-/resources/**/*.png
-/resources/**/*.xml
-/resources/**/*.html
+/practice/**/*.png
+/practice/**/*.xml
+/practice/**/*.html
