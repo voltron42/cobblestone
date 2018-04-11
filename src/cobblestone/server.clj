@@ -8,14 +8,14 @@
             [environ.core :refer [env]]
             [schema.core :as s]
             [cobblestone.core :as cob]
-            [clojure.pprint :as pp])
-  (:import (java.io ByteArrayInputStream))
+            [clojure.pprint :as pp]
+            [clojure.edn :as edn])
   (:gen-class))
 
-(defn- build-html [code]
-  (let [html-text (cob/build-html-from-tile-docs-text code)]
-    (pp/pprint html-text)
-    html-text))
+(defn- build-response [code]
+  (let [docs (edn/read-string code)
+        svgs (cob/build-svgs-from-tile-docs docs)]
+    (vals svgs)))
 
 
 (defn- build-app []
@@ -25,13 +25,12 @@
                             (sweet/resource {:description ""
                                              :post        {:summary    ""
                                                            :parameters {:body s/Any}
-                                                           :responses  {200 {:schema s/Str}}
+                                                           :responses  {200 {:schema s/Any}}
                                                            :handler    (fn [{body :body}]
                                                                          (let [code (slurp body)]
                                                                            (http/content-type
-                                                                             (http/ok (build-html code))
-                                                                             "text/html")
-                                                                           ))}}))
+                                                                             (http/ok (build-response code))
+                                                                             "application/json")))}}))
                (sweet/GET "/" [] (resp/redirect "/index.html")))
     (route/resources "/")
     (route/not-found "404 Not Found")))
