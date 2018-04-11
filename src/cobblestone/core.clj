@@ -173,15 +173,18 @@
         list (into (sorted-map) (mapv vector (range) list))
         {:keys [defs uses]} (reduce-kv
                               (fn [& n]
-                                (let [
-                                      [m k v] n
+                                (let [[m k v] n
                                       {:keys [defs uses]} m
                                       index k
                                       {:keys [name palette-name actions locs]} v
                                       actions (if (empty? actions) [] actions)
                                       {:keys [pixels]} (get tiles name)
+                                      _ (println "pixel count: " (count pixels))
+                                      _ (println "pixel: " pixels)
                                       palette (get palettes palette-name)
-                                      {:keys [bg pixels]} (if (some nil? palette) [nil pixels] (optimize-tile pixels))
+                                      _ (println "palette: " palette)
+                                      _ (println (if (some nil? palette) true false))
+                                      {:keys [bg pixels]} (if (some nil? palette) {:pixels pixels} (optimize-tile pixels))
                                       pixels (reduce-kv #(assoc %1 %2 (mapv (fn [pixel] (reduce do-action pixel actions)) %3)) {} pixels)
                                       id (str tile-name index)
                                       bg (get palette bg)

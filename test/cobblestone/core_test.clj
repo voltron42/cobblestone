@@ -2,21 +2,24 @@
   (:require [clojure.test :refer :all]
             [cobblestone.core :as pixel]
             [cobblestone.spec :as tiles]
+            [cobblestone.json :refer [j2e]]
             [clojure.xml :as xml]
             [clojure.pprint :as pp]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.spec.alpha :as s]))
+            [clojure.spec.alpha :as s]
+            [cheshire.core :as json]))
 
 (defn- build-files [xml-file tile-doc]
   (let [svg (pixel/build-svg-from-tile-doc tile-doc)
-        _ (pp/pprint svg)
         xml (->> svg
                  (xml/emit)
                  (with-out-str))]
     (spit (str "practice/" xml-file) xml)))
 
 (def ^:private doc (edn/read-string (slurp "practice/practicetiles/pixel-tiles.edn")))
+
+(def ^:private instruments (j2e (json/parse-string (slurp "practice/practicetiles/instruments.json") keyword)))
 
 (deftest test-pixel-small
   (let [[tiles palettes size {:keys [single]}] doc]
@@ -53,3 +56,8 @@
     (println (pr-str (s/explain-data ::tiles/tile-doc single)))
     (build-files "stairs.xml" single)))
 
+(deftest test-pixel-instruments
+  (let [[tiles palettes size {:keys [all-tiles]}] instruments
+        single (into [tiles palettes size] all-tiles)]
+    (println (pr-str (s/explain-data ::tiles/tile-doc single)))
+    (build-files "instruments.xml" single)))
