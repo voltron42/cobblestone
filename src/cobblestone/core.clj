@@ -214,7 +214,7 @@
   (let [tile-doc-set (s/conform ::pixel/tile-doc-set tile-docs)
         {:keys [tiles palettes pixel-size docs] :or {pixel-size 1} :as tiles-n-palettes} tile-doc-set
         tile-map (reduce-kv #(assoc %1 %2 {:tiles tiles :palettes palettes :pixel-size pixel-size :list %3}) {} docs)]
-    (reduce-kv #(do (println %2) (assoc %1 %2 (build-svg-from-exploded-tile-doc (name %2) %3))) {} tile-map)))
+    (reduce-kv #(do (assoc %1 %2 (build-svg-from-exploded-tile-doc (name %2) %3))) {} tile-map)))
 
 (defn build-html-from-tile-docs-text [in-str]
   (let [docs (edn/read-string in-str)
