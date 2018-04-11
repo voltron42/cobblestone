@@ -8,15 +8,14 @@
             [environ.core :refer [env]]
             [schema.core :as s]
             [cobblestone.core :as cob]
-            [clojure.pprint :as pp]
-            [clojure.edn :as edn])
+            [cheshire.core :as json]
+            [cobblestone.json :refer [j2e]])
   (:gen-class))
 
 (defn- build-response [code]
-  (let [docs (edn/read-string code)
+  (let [docs (j2e (json/parse-string code keyword))
         svgs (cob/build-svgs-from-tile-docs docs)]
     (vals svgs)))
-
 
 (defn- build-app []
   (sweet/routes
