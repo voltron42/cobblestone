@@ -1,0 +1,1 @@
+web: java $JVM_OPTS -cp target/cobblestone.jar clojure.main -m cobblestone.server
