@@ -15,11 +15,11 @@
         xml (->> svg
                  (xml/emit)
                  (with-out-str))]
-    (spit (str "practice/" xml-file) xml)))
+    (spit (str "resources/practice/" xml-file) xml)))
 
-(def ^:private doc (edn/read-string (slurp "practice/practicetiles/pixel-tiles.edn")))
+(def ^:private doc (edn/read-string (slurp "resources/practice/practicetiles/pixel-tiles.edn")))
 
-(def ^:private instruments (j2e (json/parse-string (slurp "practice/practicetiles/instruments.json") keyword)))
+(def ^:private instruments (j2e (json/parse-string (slurp "resources/practice/practicetiles/instruments.json") keyword)))
 
 (deftest test-pixel-small
   (let [[tiles palettes size {:keys [single]}] doc]

@@ -12,15 +12,20 @@
             [cobblestone.json :refer [j2e]])
   (:gen-class))
 
-(defn- build-response [code]
+(defn- build-svg [code]
   (let [docs (j2e (json/parse-string code keyword))
         svgs (cob/build-svgs-from-tile-docs docs)]
     (vals svgs)))
 
+(defn- build-img [code]
+  (let [docs (j2e (json/parse-string code keyword))
+        svgs (cob/build-svgs-from-tile-docs docs)]
+    (map cob/svg-to-64 (vals svgs))))
+
 (defn- build-app []
   (sweet/routes
     (sweet/api {}
-               (api/context "/build" []
+               (api/context "/svg" []
                             (sweet/resource {:description ""
                                              :post        {:summary    ""
                                                            :parameters {:body s/Any}
@@ -28,7 +33,17 @@
                                                            :handler    (fn [{body :body}]
                                                                          (let [code (slurp body)]
                                                                            (http/content-type
-                                                                             (http/ok (build-response code))
+                                                                             (http/ok (build-svg code))
+                                                                             "application/json")))}}))
+               (api/context "/img" []
+                            (sweet/resource {:description ""
+                                             :post        {:summary    ""
+                                                           :parameters {:body s/Any}
+                                                           :responses  {200 {:schema s/Any}}
+                                                           :handler    (fn [{body :body}]
+                                                                         (let [code (slurp body)]
+                                                                           (http/content-type
+                                                                             (http/ok (build-img code))
                                                                              "application/json")))}}))
                (sweet/GET "/" [] (resp/redirect "/index.html")))
     (route/resources "/")

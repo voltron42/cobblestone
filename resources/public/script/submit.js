@@ -17,16 +17,31 @@ function buildXML(node) {
     }
 }
 
-function submitTileDoc(inputId,outputId) {
+function submit(route,func,inputId,outputId) {
     var input = document.getElementById(inputId).value;
     var output = document.getElementById(outputId);
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
         if (xhttp.readyState == 4 && xhttp.status == 200) {
-            var svgData = JSON.parse(this.responseText);
-            output.innerHTML = svgData.map(buildXML).join("");
+            var data = JSON.parse(this.responseText);
+            output.innerHTML = data.map(func).join("");
         }
     };
-    xhttp.open("POST", "/build", true);
+    xhttp.open("POST", route, true);
     xhttp.send(input);
+}
+
+function submitSVG(inputId,outputId) {
+    submit("/svg",buildXML, inputId, outputId);
+}
+
+function submitIMG(inputId,outputId) {
+    submit("/img", (function(img) {
+        return buildXML({
+            tag:"img",
+            attrs:{
+                src:("data:image/png;base64,"+img)
+            }
+        });
+    }), inputId, outputId);
 }
